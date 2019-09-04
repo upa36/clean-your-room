@@ -1,36 +1,44 @@
+function formatPrice(price) {
+  return parseInt(price * 100) / 100
+}
+
+function calculateEmployerContribution(employerContribution, price) {
+  if (employerContribution.mode === 'dollar') {
+    return employerContribution.contribution
+  } else {
+    var dollarsOff = price * (employerContribution.contribution / 100)
+    return dollarsOff
+  }
+}
+
+function calculateVolLifePrice(cost, coverageLevels) {
+  var price = 0
+
+  for (var i = 0; i < coverageLevels.length; i++) {
+    var coverageAmount = coverageLevels[i].coverage
+    price += (coverageAmount / cost.costDivisor) * cost.price
+  }
+
+  return price
+}
+
+function calculateDisabilityPrice(coveragePercentage, cost, salary) {
+  var salaryPercentage = coveragePercentage / 100
+  return ((salary * salaryPercentage) / cost.costDivisor) * cost.price
+}
+
 module.exports.calculateProductPrice = function (product, employee, coverageLevels) {
   var price = 0
-  var dollarsOff = 0
 
   switch (product.type) {
     case 'volLife':
-      for (var i = 0; i < coverageLevels.length; i++) {
-        var coverageAmount = coverageLevels[i].coverage
-
-        price += (coverageAmount / product.cost.costDivisor) * product.cost.price
-      }
-
-      if (product.employerContribution.mode === 'dollar') {
-        price = price - product.employerContribution.contribution
-      } else {
-        dollarsOff = price * (product.employerContribution.contribution / 100)
-        price = price - dollarsOff
-      }
-
-      return parseInt(price * 100) / 100
+      price = calculateVolLifePrice(product.cost, coverageLevels)
+      price = price - calculateEmployerContribution(product.employerContribution, price)
+      return formatPrice(price)
     case 'ltd':
-      var salaryPercentage = product.coveragePercentage / 100
-
-      price += ((employee.salary * salaryPercentage) / product.cost.costDivisor) * product.cost.price
-
-      if (product.employerContribution.mode === 'dollar') {
-        price = price - product.employerContribution.contribution
-      } else {
-        dollarsOff = price * product.employerContribution.contribution
-        price = price - dollarsOff
-      }
-
-      return parseInt(price * 100) / 100
+      price = calculateDisabilityPrice(product.coveragePercentage, product.cost, employee.salary)
+      price = price - calculateEmployerContribution(product.employerContribution, price)
+      return formatPrice(price)
     default:
       return 0
   }
